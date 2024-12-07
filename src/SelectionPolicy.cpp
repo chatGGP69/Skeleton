@@ -13,11 +13,6 @@ NaiveSelection::NaiveSelection()
 
 const FacilityType &NaiveSelection::selectFacility(const vector<FacilityType> &facilitiesOptions)
 {
-    if (facilitiesOptions.empty())
-    {
-        throw runtime_error("No facilities available for selection.");
-    }
-
     const FacilityType &selectedFacility = facilitiesOptions[lastSelectedIndex];
     lastSelectedIndex = (lastSelectedIndex + 1) % facilitiesOptions.size();
     return selectedFacility;
@@ -25,7 +20,7 @@ const FacilityType &NaiveSelection::selectFacility(const vector<FacilityType> &f
 
 const string NaiveSelection::toString() const
 {
-    return "Naive Selection Policy";
+    return "nve";
 }
 
 NaiveSelection *NaiveSelection::clone() const
@@ -40,10 +35,6 @@ BalancedSelection::BalancedSelection(int LifeQualityScore, int EconomyScore, int
 const FacilityType &BalancedSelection::selectFacility(const vector<FacilityType> &facilitiesOptions)
 {
 
-    if (facilitiesOptions.empty())
-    {
-        throw runtime_error("No facilities available for selection.");
-    }
 
     const FacilityType *bestFacility = &facilitiesOptions[0];
     int bestBalance = INT_MAX;
@@ -69,7 +60,7 @@ const FacilityType &BalancedSelection::selectFacility(const vector<FacilityType>
 
 const string BalancedSelection::toString() const
 {
-    return "Balanced Selection Policy";
+    return "bal";
 }
 
 BalancedSelection *BalancedSelection::clone() const
@@ -84,14 +75,8 @@ EconomySelection::EconomySelection()
 
 const FacilityType &EconomySelection::selectFacility(const std::vector<FacilityType> &facilitiesOptions)
 {
-    if (facilitiesOptions.empty())
-    {
-        throw std::runtime_error("No facilities available for selection.");
-    }
-
     size_t startIndex = lastSelectedIndex;
-    do
-    {
+ 
         const FacilityType &selectedFacility = facilitiesOptions[lastSelectedIndex];
         lastSelectedIndex = (lastSelectedIndex + 1) % facilitiesOptions.size();
 
@@ -99,14 +84,11 @@ const FacilityType &EconomySelection::selectFacility(const std::vector<FacilityT
         {
             return selectedFacility;
         }
-    } while (lastSelectedIndex != startIndex);
-
-    throw std::runtime_error("No ECONOMY facility found.");
 }
 
 const string EconomySelection::toString() const
 {
-    return "Economy Selection Policy";
+    return "eco";
 }
 
 EconomySelection *EconomySelection::clone() const
@@ -120,14 +102,8 @@ SustainabilitySelection::SustainabilitySelection()
 
 const FacilityType &SustainabilitySelection::selectFacility(const std::vector<FacilityType> &facilitiesOptions)
 {
-    if (facilitiesOptions.empty())
-    {
-        throw std::runtime_error("No facilities available for selection.");
-    }
 
     size_t startIndex = lastSelectedIndex;
-    do
-    {
         const FacilityType &selectedFacility = facilitiesOptions[lastSelectedIndex];
         lastSelectedIndex = (lastSelectedIndex + 1) % facilitiesOptions.size();
 
@@ -135,14 +111,12 @@ const FacilityType &SustainabilitySelection::selectFacility(const std::vector<Fa
         {
             return selectedFacility;
         }
-    } while (lastSelectedIndex != startIndex);
-
-    throw std::runtime_error("No Enviroment facility found.");
+   
 }
 
 const string SustainabilitySelection::toString() const
 {
-    return "Sustanability Selection Policy";
+    return "env";
 }
 
 SustainabilitySelection *SustainabilitySelection::clone() const

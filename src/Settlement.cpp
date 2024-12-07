@@ -21,7 +21,7 @@ SettlementType Settlement::getType() const
 const string Settlement::toString() const
 {
     ostringstream oss;
-    oss << "Settlement Name: " << name << ", Type: ";
+    oss << "Settlement Name: " << name << 
 
     switch (this->getType())
     {

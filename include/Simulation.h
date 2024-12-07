@@ -21,6 +21,8 @@ class Simulation {
         bool isSettlementExists(const string &settlementName);
         Settlement &getSettlement(const string &settlementName);
         Plan &getPlan(const int planID);
+        //Helper Method to get the actions log
+        vector<BaseAction *> getActionsLog() const;
         void step();
         void close();
         void open();
