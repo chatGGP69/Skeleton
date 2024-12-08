@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include "Simulation.h"
+
 enum class SettlementType;
 enum class FacilityCategory;
 
@@ -12,20 +13,17 @@ ActionStatus BaseAction::getStatus() const{
     return status;
 }
 
-virtual void act(Simulation& simulation)=0;
-virtual const string toString() const=0;
-virtual BaseAction* clone() const = 0;
-virtual ~BaseAction() = default;
-
 void BaseAction::complete(){
     status = ActionStatus::COMPLETED;
 }
+
 void BaseAction::error(string errorMsg){
     status = ActionStatus::ERROR;
     this->errorMsg = errorMsg;
     std::cout << "Error: " << errorMsg << std::endl;
 }
-const string &getErrorMsg() const{
+
+const string &BaseAction::getErrorMsg() const{
     return errorMsg;
 }
 
@@ -36,15 +34,14 @@ void act(Simulation &simulation) override{
         simulation.step();  
     }
     complete();
-    //simulation.addAction(this);
 }
 
-const string toString() const override{
+const string SimulateStep::toString() const override{
     return "Step " + to_string(numOfSteps) + status.toString();
 }
 
-SimulateStep *clone() const override{
-    return new SimulateStep(numOfSteps);
+SimulateStep *SimulateStep::clone() const override{
+    return new SimulateStep(*this);
 }
 
 AddPlan::AddPlan(const string &settlementName, const string &selectionPolicy) :
@@ -68,36 +65,27 @@ void AddPlan::act(Simulation &simulation) override{
     } else if (selectionPolicy == "env") {
         policy = new SustainabilitySelectionPolicy(); 
     } else {
-        error("Cannot create this plan: Invalid selection policy");
+        error("Invalid selection policy");
         delete policy;
-        //simulation.addAction(this);
         return;
     }
-    //simulation.addPlan(settlement, policy); 
-    delete policy;
-
+    simulation.addPlan(settlement, policy); 
+    delete policy; //
     complete();
-    //simulation.addAction(this);
 }
 
 const string AddPlan::toString() const override{
     return "Plan " + settlementName + " " + selectionPolicy + status.toString();
 }
 
-AddPlan *clone() const override {
-    return new AddPlan(this);
+AddPlan *AddPlan::clone() const override {
+    return new AddPlan(*this);
 }
 
 AddSettlement::AddSettlement(const string &settlementName,SettlementType settlementType):
 settlementName(settlementName), settlementType(settlementType) {}
 
 void AddSettlement::act(Simulation &simulation) override{
-    // if (simulation.isSettlementExists(settlementName)) {
-      //  error("Settlement already exists");
-       // return;
-       // simulation.addAction(this);
-    //}
-    // Add the settlement the simulation
     Settlement* toAdd = new Settlement(settlementName, settlementType) // who handles
     if(simulation.addSettlement(toAdd)){
         complete();
@@ -105,11 +93,11 @@ void AddSettlement::act(Simulation &simulation) override{
     else{
         error("Settlement already exists");
     }
-    //simulation.addAction(this);
+
 }
 
-AddSettlement *clone() const override{
-    new AddSettlement(this);
+AddSettlement *AddSettlement::clone() const override{
+    new AddSettlement(*this);
 }
 
 const string AddSettlement::toString() const override{
@@ -127,11 +115,10 @@ void AddFacility::act(Simulation &simulation) override{
     else{
         error("Facility already exists")
     }
-    //simulation.addAction(this);
 }
 
-AddFacility *clone() const override{
-    new AddFacility(this);
+AddFacility *AddFacility::clone() const override{
+    new AddFacility(*this);
 }
 
 const string AddFacility::toString() const override{
@@ -146,16 +133,14 @@ void PrintPlanStatus::act(Simulation &simulation) override{
     Plan& plan = Simulation.getPlan(planId);
     if (!plan) {
         error("Plan doesn't exist");
-        //simulation.addAction(this);
         return;
     }
     cout << plan->toString() << endl;
     complete();
-    //simulation.addAction(this);
 }
 
-PrintPlanStatus *clone() const override{
-    return new PrintPlanStatus(this);
+PrintPlanStatus *PrintPlanStatus::clone() const override{
+    return new PrintPlanStatus(*this);
 }
 
 const string PrintPlanStatus::toString() const override{
@@ -169,12 +154,10 @@ void ChangePlanPolicy::act(Simulation &simulation) override{
     if (!plan) {
         error("Plan doesn't exist");
         return;
-        //simulation.addAction(this);
     }
     String prev = plan->getSelectionPolicy()->toString();
     if (prev == newPolicy) {
         error("Cannot change selection policy: Same as current policy");
-        //simulation.addAction(this);
         return;
     }
     SelectionPolicy* newSP = nullptr;
@@ -196,14 +179,12 @@ void ChangePlanPolicy::act(Simulation &simulation) override{
     cout << "planID: " << planId << endl;
     cout << "previousPolicy: " << prev << endl;
     cout << "newPolicy: " << newPolicy << endl;
-
     complete();
     delete newSP;
-    //simulation.addAction(this);
 }
 
-ChangePlanPolicy *clone() const override{
-    return new ChangePlanPolicy(this);
+ChangePlanPolicy *ChangePlanPolicy::clone() const override{
+    return new ChangePlanPolicy(*this);
 }
 
 const string ChangePlanPolicy::toString() const override{
@@ -213,15 +194,14 @@ const string ChangePlanPolicy::toString() const override{
 PrintActionsLog::PrintActionsLog(){}
 
 void PrintActionsLog::act(Simulation &simulation) override{
-    for( action in simulation.getActionsLog()){
-        cout << action.toString() << planId << endl;
+    for( BaseAction* action : simulation.getActionsLog()){
+        cout << action->toString() << planId << endl;
     }
     complete();
-    //simulation.addAction(this);
 }
 
-PrintActionsLog *clone() const override{
-    return new PrintActionsLog(this);
+PrintActionsLog *PrintActionsLog::clone() const override{
+    return new PrintActionsLog(*this);
 }
 
 const string PrintActionsLog::toString() const override;
@@ -230,26 +210,26 @@ Close::Close(){}
 
 void Close::act(Simulation &simulation) override{
     simulation.close();
-
     complete();
-    //simulation.addAction(this);
 }
 
-Close *clone() const override;
+Close *Close::clone() const override{
+    return new Close(*this);
+}
 
-const string Close::toString() const override;
+const string Close::toString() const override{
+    return "";
+}
 
 BackupSimulation::BackupSimulation(){}
 
 void BackupSimulation::act(Simulation &simulation) override{
     extern Simulation* backup = new Simulation(simulation);
-    //simulation.backup();
     complete();
-    //simulation.addAction(this);
 }
 
-BackupSimulation *clone() const override{
-    new BackupSimulation(this);
+BackupSimulation *BackupSimulation::clone() const override{
+    new BackupSimulation(*this);
 }
 
 const string BackupSimulation::toString() const override{
@@ -265,13 +245,11 @@ void RestoreSimulation::act(Simulation &simulation) override{
     else {
         Simulation = &backup;
     }
-    //simulation.restore();
     complete();
-    //simulation.addAction(this);
 }
 
-RestoreSimulation *clone() const override{
-    new RestoreSimulation(this);
+RestoreSimulation *RestoreSimulation::clone() const override{
+    new RestoreSimulation(*this);
 }
 
 const string RestoreSimulation::toString() const override{
