@@ -25,33 +25,21 @@ Simulation::Simulation(const std::string &configFilePath)
 
     string line;
     while (getline(configFile, line)) {
-        istringstream iss(line);
-        string command;
-        iss >> command;
-
-        if (command == "settlement") {
-            string name;
-            int type;
-            iss >> name >> type;
-            addSettlement(new Settlement(name, static_cast<SettlementType>(type)));
-
-        } else if (command == "facility") {
-            string name;
-            int category, price, lifeQuality, economy, environment;
-            iss >> name >> category >> price >> lifeQuality >> economy >> environment;
-            addFacility(FacilityType(name, static_cast<FacilityCategory>(category), price, lifeQuality, economy, environment));
-
-        } else if (command == "plan") {
-            string settlementName, policyName;
-            iss >> settlementName >> policyName;
-            Settlement &settlement = getSettlement(settlementName);
-            SelectionPolicy *policy = createSelectionPolicy(policyName);
+        vector<string> arguments = Auxiliary::parseArguments(line);
+        if(arguments.empty()){
+            continue;
+        }   
+        if (arguments[0] == "settlement") {
+            addSettlement(new Settlement(arguments[1], stoi(arguments[2])));
+        } else if (arguments[0] == "facility") {
+            addFacility(FacilityType(arguments[1], static_cast<FacilityCategory>(stoi(arguments[2])), stoi(arguments[3]), stoi(arguments[4]), stoi(arguments[5]), stoi(arguments[6])));
+        } else if (arguments[0] == "plan") {
+            Settlement &settlement = getSettlement(arguments[1]);
+            SelectionPolicy *policy = createSelectionPolicy(arguments[2]);
             addPlan(settlement, policy);
-            planCounter++;
             delete policy;
             policy = nullptr;
         }
-    }
 
     configFile.close();
 }
@@ -64,36 +52,54 @@ SelectionPolicy* Simulation::createSelectionPolicy(const string &policyName) {
     return nullptr;
 }
 
-//copy constructor  
+
+copy constructor  
 Simulation::Simulation(const Simulation &other) 
-    : isRunning(other.isRunning), planCounter(other.planCounter) {
-    for (const auto &action : other.actionsLog) {
+    : isRunning(other.isRunning),
+    planCounter(other.planCounter),
+    actionsLog(),
+    settlements(), 
+    plans() {
+    for (const BaseAction* action : other.actionsLog) {
         actionsLog.push_back(action->clone());
     }
 
-    for (const auto &plan : other.plans) {
-        plans.push_back(new Plan(*plan));
+    facilitiesOptions.clear();
+    for (const FacilityType& facility : other.facilitiesOptions){
+        facilitiesOptions.push_back(facility);
     }
 
-    for (const auto &settlement : other.settlements) {
+    for (const Settlement* settlement : other.settlements) {
         settlements.push_back(new Settlement(*settlement));
     }
 
-    for (const auto &facility : other.facilitiesOptions) {
-        facilitiesOptions.push_back(new Facility(*facility));
+    for (const Plan &plan : other.plans) {
+        plans.push_back(Plan(plan));
+    }
+    for (const auto &plan : other.plans) {
+        Plan newPlan = Plan(plan.getPlanID(), plan.getSettlement(), plan.getSelectionPolicy(), plan.getFacilities());
+        newPlan.setLifeQualityScore(plan.getLifeQualityScore());    
+        newPlan.setEconomyScore(plan.getEconomyScore());
+        newPlan.setEnvironmentScore(plan.getEnvironmentScore());
+        newPlan.setPlanStatus(plan.getPlanStatus());
+        newPlan.setConstructionLimit(plan.getConstructionLimit());
+        for (const auto &facility : plan.getFacilities()) {
+            newPlan.addFacility(facility->clone());
+        }
+        for (const auto &facility : plan.getUnderConstruction()) {
+            newPlan.addUnderConstruction(facility->clone());
+        }
     }
 }
 
 //destructor
 Simulation::~Simulation() {
-    for (auto &action : actionsLog) {
+    for (BaseAction* action : actionsLog) {
         delete action;
     }
     actionsLog.clear();
 
-    plans.clear();
-
-    for (auto &settlement : settlements) {
+    for (Settlement* settlement : settlements) {
         delete settlement;
     }
     settlements.clear();
@@ -103,118 +109,93 @@ Simulation::~Simulation() {
 //copy assignment operator
 Simulation &Simulation::operator=(const Simulation &other) {
     if (this != &other) {
-        for (auto &action : actionsLog) {
+        for (BaseAction* action : actionsLog) {
             delete action;
         }
         actionsLog.clear();
 
-        for (auto &plan : plans) {
-            delete plan;
-        }
-        plans.clear();
-
-        for (auto &settlement : settlements) {
+        for (Settlements* settlement : settlements) {
             delete settlement;
         }
         settlements.clear();
 
-        for (auto &facility : facilitiesOptions) {
-            delete facility;
-        }
         facilitiesOptions.clear();
+        for (const FacilityType& facility : other.facilitiesOptions){
+                facilitiesOptions.push_back(move(facility));
+        }
+
+        plans.clear();
+
 
         isRunning = other.isRunning;
         planCounter = other.planCounter;
 
-        for (const auto &action : other.actionsLog) {
+        for (const BaseAction* action : other.actionsLog) {
             actionsLog.push_back(action->clone());
         }
 
         for (const auto &plan : other.plans) {
-            plans.push_back(new Plan(*plan));
+            Plan newPlan = Plan(plan.getPlanID(), plan.getSettlement(), plan.getSelectionPolicy(), plan.getFacilities());
+            newPlan.setLifeQualityScore(plan.getLifeQualityScore());
+            newPlan.setEconomyScore(plan.getEconomyScore());
+            newPlan.setEnvironmentScore(plan.getEnvironmentScore());
+            newPlan.setPlanStatus(plan.getPlanStatus());
+            newPlan.setConstructionLimit(plan.getConstructionLimit());
+            for (const auto &facility : plan.getFacilities()) {
+                newPlan.addFacility(facility->clone());
+            }
+            for (const auto &facility : plan.getUnderConstruction()) {
+                newPlan.addUnderConstruction(facility->clone());
+            }
         }
 
-        for (const auto &settlement : other.settlements) {
+        for (const Settlement * settlement : other.settlements) {
             settlements.push_back(new Settlement(*settlement));
         }
 
-        for (const auto &facility : other.facilitiesOptions) {
-            facilitiesOptions.push_back(new Facility(*facility));
-        }
-    }
 
     return *this;
 }
 
+
 //move constructor
-Simulation::Simulation(Simulation &&other) 
-    : isRunning(other.isRunning), planCounter(other.planCounter) {
-    for (auto &action : other.actionsLog) {
-        actionsLog.push_back(action);
-    }
-    other.actionsLog.clear();
+Simulation::Simulation(Simulation &&other) noexcept
+    : isRunning(other.isRunning), 
+    planCounter(other.planCounter),
+    actionLog(move(other.actionLog)),
+    settlements(move(other.settlements)),
+    facilitiesOptions(move(other.facilitiesOptions)){
+        for (const Plan &plan : other.plans) {
+            plans.push_back(Plan(plan));
+        }
 
-    for (auto &plan : other.plans) {
-        plans.push_back(plan);
+        other.isRunning = false;
+        other.planCounter = 0;
+        other.actionLog.clear();
+        other.settlements.clear();
     }
-    other.plans.clear();
-
-    for (auto &settlement : other.settlements) {
-        settlements.push_back(settlement);
-    }
-    other.settlements.clear();
-
-    for (auto &facility : other.facilitiesOptions) {
-        facilitiesOptions.push_back(facility);
-    }
-    other.facilitiesOptions.clear();
 }
+
 
 //move assignment operator
 Simulation &Simulation::operator=(Simulation &&other) {
     if (this != &other) {
-        for (auto &action : actionsLog) {
+        for (BaseAction* action : actionsLog) {
             delete action;
         }
         actionsLog.clear();
 
-        for (auto &plan : plans) {
-            delete plan;
-        }
-        plans.clear();
-
-        for (auto &settlement : settlements) {
+        for (Settlement* settlement : settlements) {
             delete settlement;
         }
         settlements.clear();
 
-        for (auto &facility : facilitiesOptions) {
-            delete facility;
-        }
-        facilitiesOptions.clear();
-
         isRunning = other.isRunning;
         planCounter = other.planCounter;
-
-        for (auto &action : other.actionsLog) {
-            actionsLog.push_back(action);
-        }
-        other.actionsLog.clear();
-
-        for (auto &plan : other.plans) {
-            plans.push_back(plan);
-        }
-        other.plans.clear();
-
-        for (auto &settlement : other.settlements) {
-            settlements.push_back(settlement);
-        }
-        other.settlements.clear();
-
-        for (auto &facility : other.facilitiesOptions) {
-            facilitiesOptions.push_back(facility);
-        }
-        other.facilitiesOptions.clear();
+        settlements = other.settlements;
+        actionsLog = other.actionsLog;
+        facilitiesOptions = move(other.facilitiesOptions);
+        plans = move(other.plans);
     }
 
     return *this;
@@ -224,54 +205,59 @@ Simulation &Simulation::operator=(Simulation &&other) {
 //start the simulation
 void Simulation::start() {
     open();
-    cout<< "The simulation has started" << endl; 
+    cout<< "The simulation has started\n"; 
     while (isRunning)
     {
         string input;   
         getline(cin, input);
-        std::vector<std::string> arguments = Auxiliary::parseArguments(input);
-       
-        if (arguments[0] == "step") {
+        vector<string> arguments = Auxiliary::parseArguments(input);
+        if(arguments.empty()){
+            continue;
+        }
+        else if (arguments[0] == "step") {
             addAction(new SimulateStep(stoi(arguments[1]))->act(*this));
         }
 
-        if (arguments[0] == "plan"){
+        else if (arguments[0] == "plan"){
             addAction(new AddPlan(arguments[1], arguments[2])->act(*this));
         }
 
-        if (arguments[0] == "settlement") {
+        else if (arguments[0] == "settlement") {
             addAction(new AddSettlement(arguments[1], stoi(arguments[2]))->act(*this));
         }
         
-        if (arguments[0] == "facility") {
+        else if (arguments[0] == "facility") {
             addAction(new AddFacility(arguments[1], stoi(arguments[2]), stoi(arguments[3]), stoi(arguments[4]), stoi(arguments[5]), stoi(arguments[6]))->act(*this));
         }
         
-        if (arguments[0] == "planStatus") {
+        else if (arguments[0] == "planStatus") {
            addAction(new PrintStatus(arguments[1])->act(*this));
         }
 
-        if (arguments[0] == "changePolicy") {
+        else if (arguments[0] == "changePolicy") {
             addAction(new ChangePlanPolicy(stoi(arguments[1]), arguments[2])->act(*this));
         }
 
-        if (arguments[0] == "log") {
+        else if (arguments[0] == "log") {
             addAction(new PrintActionsLog()->act(*this));
             
         }
 
-        if (arguments[0] == "backup") {
+        else if (arguments[0] == "backup") {
             addAction(new BackupSimulation()->act(*this));
         }
 
-        if (arguments[0] == "restore") {
+        else if (arguments[0] == "restore") {
             addAction(new RestoreSimulation()->act(*this));
         }
 
-        if (arguments[0] == "close") {
-            ;
-    } 
-
+        else if (arguments[0] == "close") {
+            addAction(new CloseSimulation()->act(*this));
+        }
+    
+        else {
+            cout << "Invalid command\n";
+        }
 }
 
 //add a plan to the simulation
@@ -303,12 +289,12 @@ bool Simualtion::addFacility(FacilityType facility){
             return false;
         }
     }
-    facilitiesOptions.push_back(facility);
+    facilitiesOptions.push_back(move(facility));
     return true;
 }
 
 bool isSettlementExists(const string &settlementName){
-    for (const auto &settlement : settlements) {
+    for (Settlement* settlement : settlements) {
         if (settlement->getName() == settlementName) {
             return true;
         }
@@ -317,7 +303,7 @@ bool isSettlementExists(const string &settlementName){
 }
 
 Settlement &getSettlement(const string &settlementName){
-    for (const auto &settlement : settlements) {
+    for (Setllemnt* settlement : settlements) {
         if (settlement->getName() == settlementName) {
             return *settlement;
         }
@@ -332,6 +318,9 @@ Plan Simualtion::&getPlan(const int planID){
     }
 }
 
+int Simulation::getPlanCounter() const {
+    return planCounter;
+}
 
 vector<BaseAction *> Simulation::getActionsLog() const {
     return actionsLog;
@@ -345,6 +334,10 @@ void Simulation::step(){
 
 void Simulation::close() {
     isRunning = false;
+
+    for(Plan plan : plans){
+        plan.printStatus();
+    }
 }
 
 void Simulation::open() {

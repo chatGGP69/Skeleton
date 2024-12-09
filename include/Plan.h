@@ -29,8 +29,7 @@ class Plan {
         void addFacility(Facility* facility);
         const string toString() const;
         void setPlanStatus();
-        //Helper Method to clear resources
-        void clearResources();
+         
 
     private:
         int plan_id;
