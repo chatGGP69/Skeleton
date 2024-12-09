@@ -25,6 +25,8 @@ class Simulation {
         vector<BaseAction *> getActionsLog() const;
         //Helper Method to get planCounter
         int getPlanCounter() const;
+        //helper method to get the selection policy
+        SelectionPolicy* createSelectionPolicy(const string &policyName);
         void step();
         void close();
         void open();
