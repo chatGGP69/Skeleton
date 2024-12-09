@@ -9,8 +9,8 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
-using std string;
 using namespace std;
+
 class BaseAction;
 class SelectionPolicy;
 
@@ -44,6 +44,7 @@ Simulation::Simulation(const std::string &configFilePath)
     configFile.close();
 }
 
+
 SelectionPolicy* Simulation::createSelectionPolicy(const string &policyName) {
     if (policyName == "nve") return new NaiveSelection();
     if (policyName == "bal") return new BalancedSelection(0,0,0);
@@ -53,7 +54,7 @@ SelectionPolicy* Simulation::createSelectionPolicy(const string &policyName) {
 }
 
 
-copy constructor  
+//copy constructor  
 Simulation::Simulation(const Simulation &other) 
     : isRunning(other.isRunning),
     planCounter(other.planCounter),
