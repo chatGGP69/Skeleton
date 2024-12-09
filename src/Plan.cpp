@@ -2,6 +2,7 @@
 #include <vector>
 #include "Plan.h"
 using std::vector;
+using namespace std;
 
 
 //Constructor
@@ -12,7 +13,7 @@ Plan::Plan(const int planId, const Settlement &settlement, SelectionPolicy *sele
       facilityOptions(facilityOptions),
       status(PlanStatus::AVALIABLE),
       facilities(),
-      underConstruction(),
+      underConstruction(),  
       life_quality_score(0),
       economy_score(0),
       environment_score(0) {
@@ -31,19 +32,33 @@ Plan::Plan(const int planId, const Settlement &settlement, SelectionPolicy *sele
         }
       }
 
+// might be useful to have a constructor that takes in the scores as well
+Plan::Plan(const int planId, const Settlement &settlement,
+SelectionPolicy *selectionPolicy, const vector<FacilityType> &facilityOptions,
+int LifeScore, int EconomyScore, int EnviromentScore) 
+: plan_id(planId),
+settlement(settlement),
+selectionPolicy(selectionPolicy->clone()),
+status(PlanStatus::AVALIABLE), facilities(), underConstruction(),
+facilityOptions(facilityOptions), life_quality_score(0),
+ economy_score(0), environment_score(0){
+
+ }
+
 //Copy Constructor
 Plan::Plan(const Plan &other)
     : plan_id(other.plan_id),
       settlement(other.settlement),
       selectionPolicy(other.selectionPolicy->clone()),
       facilityOptions(other.facilityOptions),
+      facilities(),
+      underConstruction(),  
       status(other.status),
       life_quality_score(other.life_quality_score),
       economy_score(other.economy_score),
       environment_score(other.environment_score),
       constructionLimit(other.constructionLimit)
 {
-
     for (const auto facility : other.facilities)
     {
         facilities.push_back(facility->clone());
@@ -56,11 +71,11 @@ Plan::Plan(const Plan &other)
 }
 
 //Move Constructor
-Plan::Plan(Plan &&other)
+Plan::Plan(Plan &&other) noexcept
     : plan_id(other.plan_id),
       settlement(other.settlement),
       selectionPolicy(other.selectionPolicy),
-      facilityOptions(other.facilityOptions),
+      facilityOptions(move(other.facilityOptions)),
       status(other.status),
       facilities(move(other.facilities)),
       underConstruction(move(other.underConstruction)),
@@ -69,15 +84,31 @@ Plan::Plan(Plan &&other)
       environment_score(other.environment_score),
       constructionLimit(other.constructionLimit)
 {
-    other.selectionPolicy = nullptr;
     other.facilities.clear();
     other.underConstruction.clear();
+    other.selectionPolicy = nullptr;
 }
 
 //Destructor
 Plan::~Plan()
 {
-    clearResources();
+     for (auto &facility : facilities)
+    {
+        delete facility;
+        facility = nullptr;
+    }
+
+    for (auto facility : underConstruction)
+    {
+        delete facility;
+        facility = nullptr;
+    }
+
+    if (selectionPolicy)
+    {
+        delete selectionPolicy;
+        selectionPolicy = nullptr;
+    }
 }
 
 
@@ -127,7 +158,7 @@ void Plan::step()
         while (underConstruction.size() < constructionLimit)
         {
             FacilityType facilityType = selectionPolicy->selectFacility(facilityOptions, life_quality_score, economy_score, environment_score);
-            Facility *facility = new Facility(facilityType);
+            Facility *facility = new Facility(facilityType, settlement.getName());
             underConstruction.push_back(facility);
         }
         
@@ -167,7 +198,6 @@ void Plan::printStatus()
 
 void Plan::addFacility(Facility *facility)
 {
-    if(facility != nullptr)
         facilities.push_back(facility);
 }
 
@@ -213,25 +243,4 @@ const string Plan::toString() const {
     return oss.str();
 }
 
-//Helper method to clear resources
-void Plan::clearResources()
-{
-    for (auto facility : facilities)
-    {
-        delete facility;
-    }
-    facilities.clear(); 
-
-    for (auto facility : underConstruction)
-    {
-        delete facility;
-    }
-    underConstruction.clear();
-
-    if (selectionPolicy)
-    {
-        delete selectionPolicy;
-        selectionPolicy = nullptr;
-    }
-}
 

@@ -17,27 +17,27 @@ enum class FacilityCategory
     ECONOMY,
     ENVIRONMENT,
 };
-string categoryToString(FacilityCategory category);
 
-class FacilityType
-{
-public:
-    FacilityType(const string &name, const FacilityCategory category, const int price, const int lifeQuality_score, const int economy_score, const int environment_score);
-    const string &getName() const;
-    int getCost() const;
-    int getLifeQualityScore() const;
-    int getEnvironmentScore() const;
-    int getEconomyScore() const;
-    FacilityCategory getCategory() const;
 
-protected:
-    const string name;
-    const FacilityCategory category;
-    const int price;
-    const int lifeQuality_score;
-    const int economy_score;
-    const int environment_score;
+class FacilityType {
+    public:
+        FacilityType(const string &name, const FacilityCategory category, const int price, const int lifeQuality_score, const int economy_score, const int environment_score);
+        const string &getName() const;
+        int getCost() const;
+        int getLifeQualityScore() const;
+        int getEnvironmentScore() const;
+        int getEconomyScore() const;
+        FacilityCategory getCategory() const;
+
+    protected:
+        const string name;
+        const FacilityCategory category;
+        const int price;
+        const int lifeQuality_score;
+        const int economy_score;
+        const int environment_score;
 };
+
 
 class Facility : public FacilityType
 {

@@ -23,6 +23,8 @@ class Simulation {
         Plan &getPlan(const int planID);
         //Helper Method to get the actions log
         vector<BaseAction *> getActionsLog() const;
+        //Helper Method to get planCounter
+        int getPlanCounter() const;
         void step();
         void close();
         void open();

@@ -2,7 +2,6 @@
 #include <sstream>
 #include <unordered_map>
 #include <stdexcept>
-
 using namespace std;
 
 Settlement::Settlement(const string &name, SettlementType type)
